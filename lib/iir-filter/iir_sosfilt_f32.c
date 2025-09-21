@@ -32,6 +32,10 @@
 static void biquad_process_f32(const float coeff[5], float state[2], float *output,
                                const float *input, size_t frames);
 
+/**
+ * @brief spark_sosfilt_f32() only supports planar memory layout
+ */
+#define SOSFILT_F32_FLAGS (SPARK_FMT_F32 | SPARK_LAYOUT_PLANAR | SPARK_BLOCK_PROCESS)
 
 /**
  * @brief Cascade of biquad (SOS) filters, single-precision, mono.
@@ -92,8 +96,8 @@ static void biquad_process_f32(const float coeff[5], float state[2], float *outp
 void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
 {
   assert(self);
-  int status = spark_block_validate(self, SPARK_FMT_F32 | SPARK_LAYOUT_PLANAR |
-                                    SPARK_BLOCK_PROCESS);
+  int status = spark_block_validate(self, SOSFILT_F32_FLAGS);
+
   assert(status == SPARK_NOERROR);
 
   if (status != SPARK_NOERROR) {
