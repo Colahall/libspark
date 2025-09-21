@@ -1,0 +1,48 @@
+# .clang-format configuration
+# Based on LLVM style with custom function brace wrapping
+
+BasedOnStyle: LLVM
+
+# Set breaking style to Custom to enable BraceWrapping options
+BreakBeforeBraces: Custom
+
+# Brace wrapping configuration
+BraceWrapping:
+  AfterFunction: true          # Function braces on new line
+  AfterControlStatement: false # Keep control statement braces on same line
+  AfterStruct: false          # Keep struct braces on same line
+  AfterClass: false           # Keep class braces on same line
+  AfterEnum: false            # Keep enum braces on same line
+  AfterNamespace: false       # Keep namespace braces on same line
+  AfterUnion: false           # Keep union braces on same line
+  BeforeCatch: false          # Keep catch on same line as }
+  BeforeElse: false           # Keep else on same line as }
+  IndentBraces: false         # Don't indent braces themselves
+  SplitEmptyFunction: true    # Allow empty functions to be on single line
+  SplitEmptyRecord: true      # Allow empty structs/classes to be on single line
+  SplitEmptyNamespace: true   # Allow empty namespaces to be on single line
+
+# Column limit
+ColumnLimit: 90
+
+# Additional formatting options (inherits from LLVM but can be customized)
+IndentWidth: 2
+UseTab: Never
+TabWidth: 8
+ContinuationIndentWidth: 4
+
+# Macro formatting
+AlignEscapedNewlines: Left   # Don't align \ to the right edge
+MaxEmptyLinesToKeep: 2
+
+# Function declaration and definition formatting
+AllowShortFunctionsOnASingleLine: Empty  # Only allow empty functions on single line
+AlwaysBreakAfterReturnType: None         # Don't break after return type
+
+# Pointer and reference alignment
+PointerAlignment: Right      # int *ptr (LLVM style)
+ReferenceAlignment: Pointer  # Follow pointer alignment
+
+# Include sorting
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
