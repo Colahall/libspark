@@ -47,11 +47,11 @@ extern "C" {
  *
  * Layout semantics (single @ref spark_buffer_t::base pointer):
  * - @ref SPARK_LAYOUT_INTERLEAVED:
- *     `base` points to `frames * channels` samples in frame-major order:
+ *     `base` points to `samples * channels` samples in frame-major order:
  *     frame n = [c0, c1, …, c(C-1)], then frame n+1, etc.
  * - @ref SPARK_LAYOUT_PLANAR:
  *     `base` points to channel-major **contiguous planes** (not ptr-to-ptr):
- *     channel k starts at `((T*)base) + k * frames`. Each plane has `frames` samples.
+ *     channel k starts at `((T*)base) + k * samples`. Each plane has `samples` samples.
  *
  * @note Use `spark_buffer_get_format(flags)` / `spark_buffer_get_layout(flags)`
  *       to extract fields, and `spark_buffer_bytes_per_sample()` for element size.
@@ -96,7 +96,7 @@ enum spark_block_type {
    */
   SPARK_BLOCK_INVALID = 0,
   /** Process block:
-   *  - Input and output must be *similar* (same format, layout, channels, frames).
+   *  - Input and output must be *similar* (same format, layout, channels, samples).
    *  - Both input.base and output.base must be non-NULL.
    */
   SPARK_BLOCK_PROCESS = 0x1U << 8,
@@ -139,7 +139,7 @@ enum spark_block_type {
  * - Return @ref SPARK_ERR_INVALID_SIZE when `struct_size` is too small.
  * - Return @ref SPARK_ERR_INVALID_ABI when `abi_version` mismatches the library.
  * - Return @ref SPARK_ERR_INVALID_INPUT / @ref SPARK_ERR_INVALID_OUTPUT for
- *   buffer-specific issues (wrong format/layout, zero channels/frames, NULL base
+ *   buffer-specific issues (wrong format/layout, zero channels/samples, NULL base
  *   where required).
  * - Return @ref SPARK_ERR_INVALID_BLOCK for cross-buffer or block-type problems
  *   (e.g., PROCESS requires input/output similarity and both bases present).
@@ -164,25 +164,25 @@ enum spark_block_error {
 /**
  * @brief Descriptor of a multichannel audio buffer (format + layout in @ref flags).
  *
- * The buffer’s sample format and memory layout are encoded in @ref flags using
+ * The buffer's sample format and memory layout are encoded in @ref flags using
  * exactly one `SPARK_FMT_*` and one `SPARK_LAYOUT_*` value.
  *
  * @details
  *
- * ## Layouts (single @ref base pointer):
+ * ## Layouts:
  * - @ref SPARK_LAYOUT_INTERLEAVED
- *   `base` points to `frames * channels` samples in *frame-major* order:
+ *   `base` points to `samples * channels` samples in *sample-major* order:
  *   frame n = `[c0, c1, …, c(C-1)]`, then frame n+1, etc.
  *
  * - @ref SPARK_LAYOUT_PLANAR
  *   `base` points to *channel-major contiguous planes* (not pointer-to-pointer):
- *   channel k starts at `((T*)base) + k * frames`, each plane holds `frames` samples.
+ *   channel k starts at `((T*)base) + k * samples`, each plane holds `samples` samples.
  *
  * This type does **not** model pointer-to-pointer planar or custom strides. If you
  * need those, add a separate descriptor or pack into a contiguous view.
  *
  * @note
- * - @ref frames is the number of samples **per channel**.
+ * - @ref samples is the number of samples **per channel**.
  * - Ownership and constness are not encoded here; kernels should treat the input
  *   buffer as read-only by convention.
  *
@@ -194,7 +194,7 @@ enum spark_block_error {
 typedef struct spark_buffer {
   void *base;        /**< Base pointer to the sample data (see layout semantics). */
   uint32_t channels; /**< The number of audio channels */
-  uint32_t frames;   /**< Number of frames per channel */
+  uint32_t samples;   /**< Number of samples per channel */
   uint32_t flags;    /**< Combined flags: one SPARK_FMT_* and one SPARK_LAYOUT_*. */
 } spark_buffer_t;
 
@@ -209,10 +209,10 @@ typedef struct spark_buffer {
  * @details
  * - The caller must set `abi_version` to @ref SPARK_ABI_VERSION and
  *   `struct_size` to `sizeof(spark_block_t)` before use.
- * - For interleaved layouts, `buffer.base` points to frames × channels samples
+ * - For interleaved layouts, `buffer.base` points to samples × channels samples
  *   in frame-major order. For planar layouts, `buffer.base` points to
  *   channel-major contiguous planes (channel k starts at
- *   `base + k * frames`). Pointer-to-pointer planar is not represented.
+ *   `base + k * samples`). Pointer-to-pointer planar is not represented.
  * - Whether input/output bases may alias is kernel-dependent; validate with
  *   @ref spark_block_validate for a specific operation (PROCESS/CONVERT/SOURCE/SINK).
  *
@@ -307,12 +307,12 @@ static inline size_t spark_buffer_bytes_per_sample(const spark_buffer_t *buf)
  * - If either pointer is `NULL` (and they are not the same), returns `false`.
  *
  * This function does **not** validate that the format/layout bits are valid,
- * nor that channels/frames are non-zero. Use this for quick compatibility checks;
+ * nor that channels/samples are non-zero. Use this for quick compatibility checks;
  * perform full validation elsewhere (e.g., in `spark_block_validate()`).
  *
  * @param[in] a  First buffer descriptor (may be NULL).
  * @param[in] b  Second buffer descriptor (may be NULL).
- * @retval true  If format, layout, channels, and frames all match.
+ * @retval true  If format, layout, channels, and samples all match.
  * @retval false Otherwise, or if either pointer is NULL (and not identical).
  */
 static inline bool spark_buffer_is_similar(const spark_buffer_t *a,
@@ -325,7 +325,7 @@ static inline bool spark_buffer_is_similar(const spark_buffer_t *a,
 
   return (spark_buffer_get_format(a->flags) == spark_buffer_get_format(b->flags)) &&
          (spark_buffer_get_layout(a->flags) == spark_buffer_get_layout(b->flags)) &&
-         (a->channels == b->channels) && (a->frames == b->frames);
+         (a->channels == b->channels) && (a->samples == b->samples);
 }
 
 /**
@@ -340,7 +340,7 @@ static inline bool spark_buffer_is_similar(const spark_buffer_t *a,
  */
 static inline bool spark_buffer_is_valid(const spark_buffer_t *buf)
 {
-  return (buf) && (buf->base) && (buf->channels > 0) && (buf->frames > 0);
+  return (buf) && (buf->base) && (buf->channels > 0) && (buf->samples > 0);
 }
 
 /**

@@ -33,22 +33,22 @@
  * and then applies per–block-type rules:
  *
  * - **SPARK_BLOCK_PROCESS**:
- *   - `input` and `output` must be *similar* (same channels, frames, fmt, layout).
+ *   - `input` and `output` must be *similar* (same channels, samples, fmt, layout).
  *   - `input.base` and `output.base` must be non-NULL.
  *   - Both buffers' fmt/layout must match the required fmt/layout in @p flags.
  *
  * - **SPARK_BLOCK_CONVERT**:
- *   - `input` must have required fmt/layout and non-zero channels/frames.
+ *   - `input` must have required fmt/layout and non-zero channels/samples.
  *   - `input.base` **and** `output.base` must be non-NULL (conversion produces data).
  *   - Frame counts may differ (channels policy up to the caller—document your choice).
  *
  * - **SPARK_BLOCK_SOURCE**:
- *   - `output` must have required fmt/layout, non-zero channels/frames, and non-NULL
+ *   - `output` must have required fmt/layout, non-zero channels/samples, and non-NULL
  *      base.
  *   - `input` is ignored (may be NULL/zero).
  *
  * - **SPARK_BLOCK_SINK**:
- *   - `input` must have required fmt/layout, non-zero channels/frames, and non-NULL base.
+ *   - `input` must have required fmt/layout, non-zero channels/samples, and non-NULL base.
  *   - `output` is ignored (may be NULL/zero).
  *
  * @param p_block Pointer to the block to validate (may be NULL).

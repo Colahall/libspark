@@ -30,7 +30,7 @@
 #include <stddef.h>
 
 static void biquad_process_f32(const float coeff[5], float state[2], float *output,
-                               const float *input, size_t frames);
+                               const float *input, size_t samples);
 
 /**
  * @brief spark_sosfilt_f32() only supports planar memory layout
@@ -40,7 +40,7 @@ static void biquad_process_f32(const float coeff[5], float state[2], float *outp
 /**
  * @brief Cascade of biquad (SOS) filters, single-precision, mono.
  *
- * Processes @p frames samples through @p stages second-order sections (SOS)
+ * Processes @p samples through @p stages second-order sections (SOS)
  * in series: the output of stage k feeds stage k+1.
  *
  * ### Per-stage layout (what @p spark_tdf2_biquad_f32() expects)
@@ -80,8 +80,8 @@ static void biquad_process_f32(const float coeff[5], float state[2], float *outp
  * @endcode
  *
  * ### Buffer flow
- * - Input:  @p input[0..frames-1]   (read)
- * - Output: @p output[0..frames-1]  (write)
+ * - Input:  @p input[0..samples-1]   (read)
+ * - Output: @p output[0..samples-1]  (write)
  * - Stage 0 reads @p input and writes @p output.
  * - For k>0, stage k reads from @p output of the previous stage
  *   (in-place cascade).
@@ -107,7 +107,7 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
   assert(self->coefficients && self->states && (self->n_stages > 0));
 
   const uint32_t n_chan = self->header.input.channels;
-  const uint32_t n_frames = self->header.input.frames;
+  const uint32_t n_samples = self->header.input.samples;
   const uint32_t n_stages = self->n_stages;
   const bool share_sos = (self->flags & SPARK_SOSFILT_SHARE_SOS);
 
@@ -119,8 +119,8 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
   assert(input && output);
 
   for (uint32_t chan = 0; chan < n_chan; ++chan) {
-    const float *in = input + (chan * n_frames);
-    float *out = output + (chan * n_frames);
+    const float *in = input + (chan * n_samples);
+    float *out = output + (chan * n_samples);
 
     /* Start over the count if SOS is shared for all channels */
     if (share_sos) {
@@ -128,7 +128,7 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
     }
 
     for (uint32_t stage = 0; stage < n_stages; ++stage) {
-      biquad_process_f32(coeff, states, out, in, n_frames);
+      biquad_process_f32(coeff, states, out, in, n_samples);
       coeff += 5;
       states += 2;
 
@@ -144,7 +144,7 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
 /**
  * @brief Single-precision biquad (SOS) IIR, transposed Direct Form II (TDF-II).
  *
- * Processes @p frames mono samples through one biquad section. The function
+ * Processes @p samples mono samples through one biquad section. The function
  * reads @p input, writes @p output, and updates @p state in place.
  *
  * ### Coefficient layout (5 floats)
@@ -168,8 +168,8 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
  * @endcode
  *
  * ### Buffer flow
- * - Input : input[0..frames-1]   (read)
- * - Output: output[0..frames-1]  (write)
+ * - Input : input[0..samples-1]   (read)
+ * - Output: output[0..samples-1]  (write)
  * - In-place is allowed if `output == input` (reads happen before writes per
  * sample).
  *
@@ -186,12 +186,12 @@ void spark_sosfilt_f32(spark_sosfilt_f32_t *self)
  *
  * @param[in] coeff  Pointer to 5 float32 coefficients {b0,b1,b2,a1,a2}.
  * @param[in,out] state  Pointer to 2 float32 state values {w1,w2} (persist across calls).
- * @param[out] output Pointer to @p frames float32 output samples.
- * @param[in] input  Pointer to @p frames float32 input samples.
- * @param[in] frames Number of mono samples to process.
+ * @param[out] output Pointer to @p samples float32 output samples.
+ * @param[in] input  Pointer to @p samples float32 input samples.
+ * @param[in] samples Number of mono samples to process.
  */
 static void biquad_process_f32(const float coeff[5], float state[2], float *output,
-                               const float *input, size_t frames)
+                               const float *input, size_t samples)
 {
   // Load coefficients
   const float b0 = coeff[0];
@@ -204,7 +204,7 @@ static void biquad_process_f32(const float coeff[5], float state[2], float *outp
   float s1 = state[0];
   float s2 = state[1];
 
-  for (size_t i = 0; i < frames; ++i) {
+  for (size_t i = 0; i < samples; ++i) {
     float x = input[i];
     float y = (b0 * x) + s1;
     s1 = (b1 * x) + (a1 * y) + s2;
